@@ -3,12 +3,14 @@
 #ifndef Matrix_h__
 #define Matrix_h__
 
-//#include "Stdafx.h"
+#include <cmath>
+#include "MatrixB.h"
+
 
 namespace MatrixLib
 {
 	template<class Number>
-	class Matrix
+	class Matrix : public MatrixB<Number>
 	{
 	public:
 		// type define Matrix and Number
@@ -17,79 +19,54 @@ namespace MatrixLib
 		typedef void (*Function)(const Number&);
 
 	public:
-		Matrix() :nRow(0), nCol(0), data(NULL)
+		Matrix() :MatrixB()
 		{
 
 		}
 
 		explicit Matrix(const _Matrix& _matrix)
+			:MatrixB(_matrix)
 		{
-			copy(_matrix);
+			
 		}
 
 		Matrix(unsigned int _row, unsigned int _col)
+			:MatrixB(_row, _col)
 		{
 			alloc(_row, _col);
 		}
 
 		virtual ~Matrix()
 		{
-			free();
-		}
-
-	protected:
-		// store the matrix length
-		unsigned int nRow;
-		unsigned int nCol;
-		// store the matrix value
-		// data[0~nRow-1][0~nCol-1]
-		Number* data;
-
-	protected:
-		inline void alloc(unsigned int _row, unsigned int _col) //throw 
-		{
-			if(nRow != _row || nCol != _col)
-			{
-				nRow = _row;
-				nCol = _col;
-				delete[] data;
-				data = new Number[nRow*nCol];
-			}
-		}
-
-		inline void free()
-		{
-			nRow = nCol = 0;
-			delete[] data;
-			data = NULL;
+			
 		}
 
 	public:
-		// compare matrix size and value
-		static inline bool equal(const _Matrix& _mat1, const _Matrix& _mat2)
+		// compare matrix size
+		static inline bool compareSize(const _Matrix& _mat1, const _Matrix& _mat2)
 		{
-			if(_mat1.nRow != _mat2.nRow 
-				|| _mat1.nCol != _mat2.nCol)
+			return (_mat1.rows() == _mat2.rows() 
+				&& _mat1.cols() == _mat2.cols());
+		}
+
+		// compare matrix size and value
+		static inline bool isEqual(const _Matrix& _mat1, const _Matrix& _mat2)
+		{
+			if(_mat1.rows() != _mat2.rows() 
+				|| _mat1.cols() != _mat2.cols())
 				return false;
 
-			unsigned int size = _mat1.nRow * _mat1.nCol;
+			unsigned int size = _mat1.rows() * _mat1.cols();
 			for(unsigned int n = 0; n < size; n++)
 			{
-				if(_mat1.data[n] != _mat2.data[n])
+				if(_mat1.at(n) != _mat2.at(n))
 					return false;
 			}
 			return true;
 		}
 
-		// compare matrix size
-		static inline bool compare(const _Matrix& _mat1, const _Matrix& _mat2)
-		{
-			return (_mat1.nRow == _mat2.nRow 
-				&& _mat1.nCol == _mat2.nCol);
-		}
-
 		// compare data address(is the same)
-		static inline bool shared(const _Matrix& _mat1, const _Matrix& _mat2)
+		static inline bool isShared(const _Matrix& _mat1, const _Matrix& _mat2)
 		{
 			if(!_mat1.assert() || !_mat2.assert())
 				return false;
@@ -97,118 +74,119 @@ namespace MatrixLib
 		}
 
 		// swap data
-		static inline void swap(const _Matrix& _mat1, const _Matrix& _mat2)
+		static inline void swapMatrix(const _Matrix& _mat1, const _Matrix& _mat2)
 		{
 			_Number* data = _mat1.data;
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat1.nCol();
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
 
 			_mat1.data = _mat2.data;
-			_mat1.nRow = _mat2.nRow;
-			_mat1.nCol = _mat2.nCol;
+			_mat1.nRow = _mat2.rows();
+			_mat1.nCol = _mat2.cols();
 			_mat2.data = data;
-			_mat2.nRow = nRow;
-			_mat2.nCol = nCol;
+			_mat2.nRow = nrow;
+			_mat2.nCol = ncol;
 		}
 
 	public:
 		// _mat3 = _mat1 + _mat2
-		static inline bool add(const _Matrix& _mat1, const _Matrix& _mat2, const _Matrix& _mat3)
+		static inline bool toAdd(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compareSize(_mat1, _mat2))
+			if(!_Matrix::compare(_mat1, _mat2))
 				return false;
 
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat1.nCol();
-			_mat3.alloc(nRow, nCol);
-			for(unsigned int n = 0; n < nCol*nRow; n++)
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat3.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
 			{
-				_mat3.data[n] = _mat1.data[n] + _mat2.data[n];
+				_mat3.atr(n) = _mat1.at(n) + _mat2.at(n);
 			}
 
 			return true;
 		}
 
 		// _mat2 = _mat1 + _number
-		static inline bool add(const _Matrix& _mat1, _Number _number, const _Matrix& _mat2)
+		static inline bool toAdd(_Matrix& _mat1, _Number _number, _Matrix& _mat2)
 		{
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat1.nCol();
-			_mat2.alloc(nRow, nCol);
-			for(unsigned int n = 0; n < nCol*nRow; n++)
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat2.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
 			{
-				_mat2.data[n] = _mat1.data[n] + _number;
+				_mat2.atr(n) = _mat1.at(n) + _number;
 			}
 
 			return true;
 		}
 
 		// _mat3 = _mat1 - _mat2
-		static inline void sub(const _Matrix& _mat1, const _Matrix& _mat2, const _Matrix& _mat3)
+		static inline void toSub(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compareSize(_mat1, _mat2))
+			if(!_Matrix::compare(_mat1, _mat2))
 				return false;
 
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat1.nCol();
-			_mat3.alloc(nRow, nCol);
-			for(unsigned int n = 0; n < nCol*nRow; n++)
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat3.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
 			{
-				_mat3.data[n] = _mat1.data[n] - _mat2.data[n];
+				_mat3.atr(n) = _mat1.at(n) - _mat2.at(n);
 			}
 
 			return true;
 		}
 
 		// _mat2 = _mat1 - _number
-		static inline bool sub(const _Matrix& _mat1, _Number _number, const _Matrix& _mat2)
+		static inline bool toSub(_Matrix& _mat1, _Number _number, _Matrix& _mat2)
 		{
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat1.nCol();
-			_mat2.alloc(nRow, nCol);
-			for(unsigned int n = 0; n < nCol*nRow; n++)
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat2.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
 			{
-				_mat2.data[n] = _mat1.data[n] - _number;
+				_mat2.atr(n) = _mat1.at(n) - _number;
 			}
 
 			return true;
 		}
 
 		// _mat2 = _number - _mat1
-		static inline bool sub(_Number _number, const _Matrix& _mat1, const _Matrix& _mat2)
+		static inline bool toSub(_Number _number, _Matrix& _mat1, _Matrix& _mat2)
 		{
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat1.nCol();
-			_mat2.alloc(nRow, nCol);
-			for(unsigned int n = 0; n < nCol*nRow; n++)
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat2.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
 			{
-				_mat2.data[n] = _number - _mat1.data[n];
+				_mat2.atr(n) = _number - _mat1.atr(n);
 			}
 
 			return true;
 		}
 
 		// _mat3 = _mat1 * _mat2
-		static inline void cross(const _Matrix& _mat1, const _Matrix& _mat2, const _Matrix& _mat3)
+		static inline void toCross(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(_mat1.nCol() != _mat2.nRow())
+			if(_mat1.cols() != _mat2.rows())
 				return false;
 
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat2.nCol();
-			unsigned int nInner = _mat2.nRow();
-			_mat3.alloc(nRow, nCol);
-			for(unsigned int i = 0; i < nRow; i++)
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat2.cols();
+			unsigned int inner = _mat2.rows();
+			_mat3.alloc(nrow, ncol);
+			for(unsigned int i = 0; i < nrow; i++)
 			{
 				unsigned int z = 0;
-				for(unsigned int j = 0; j < nCol; j++)
+				for(unsigned int j = 0; j < ncol; j++)
 				{
-					for(unsigned int k = 0; k < nInner; k++)
+					for(unsigned int k = 0; k < inner; k++)
 					{
 						// z = _mat1[i][k] + _mat2[k][j] for k = 0:nInner
-						z += _mat1.data[nRow*k+i] * _mat2[nInner*j+k];
+						z += _mat1.at(i,k) * _mat2.at(k,j);
 					}
-					_mat3.data[nRow*j+i] = z;
+					// _mat[i][j] = z
+					_mat3.at(i,j) = z;
 				}
 			}
 
@@ -216,38 +194,52 @@ namespace MatrixLib
 		}
 
 		// _mat3 = _mat1 .* _mat2
-		static inline void dot(const _Matrix& _mat1, const _Matrix& _mat2, const _Matrix& _mat3)
+		static inline void toDot(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compareSize(_mat1, _mat2))
+			if(!_Matrix::compare(_mat1, _mat2))
 				return false;
 
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat1.nCol();
-			_mat3.alloc(nRow, nCol);
-			for(unsigned int n = 0; n < nCol*nRow; n++)
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat3.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
 			{
-				_mat3.data[n] = _mat1.data[n] * _mat2.data[n];
+				_mat3.atr(n) = _mat1.at(n) * _mat2.at(n);
 			}
 
 			return true;
 		}
 
 		// _mat2 = _mat1 .* _number
-		static inline bool dot(const _Matrix& _mat1, _Number _number, const _Matrix& _mat2)
+		static inline bool toDot(_Matrix& _mat1, _Number _number, _Matrix& _mat2)
 		{
-			unsigned int nRow = _mat1.nRow();
-			unsigned int nCol = _mat1.nCol();
-			_mat2.alloc(nRow, nCol);
-			for(unsigned int n = 0; n < nCol*nRow; n++)
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat2.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
 			{
-				_mat2.data[n] = _mat1.data[n] * _number;
+				_mat2.atr(n) = _mat1.at(n) * _number;
+			}
+
+			return true;
+		}
+
+		// _mat2 = _mat1 .^ _number
+		static inline bool toPower(_Matrix& _mat1, _Number _number, _Matrix& _mat2)
+		{
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat2.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
+			{
+				_mat2.atr(n) = pow(_mat1.at(n), _number);
 			}
 
 			return true;
 		}
 
 		// _mat3 = [_mat1 _mat2]
-		static inline bool combine1(const _Matrix& _mat1, const _Matrix& _mat2, const _Matrix& _mat3)
+		static inline bool combineRow(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
 			if(_mat1.rows() != _mat2.rows())
 				return false;
@@ -258,19 +250,20 @@ namespace MatrixLib
 				for(unsigned int j = 0; j < _mat1.cols(); j++)
 				{
 					// _mat3[i][j] = _mat1[i][j]
-					_mat3.data[_mat3.rows()*j+i] = _mat1.data[_mat1.rows()*j+i];
+					_mat3.atr(i,j) = _mat1.at(i,j);
 				}
 
-				for(unsigned int j = _mat1.cols(); j < _mat2.cols(); j++)
+				unsigned int colb = _mat1.cols();
+				for(unsigned int j = 0; j < _mat2.cols(); j++)
 				{
-					// _mat3[i][j] = _mat2[i][j]
-					_mat3.data[_mat3.rows()*j+i] = _mat2.data[_mat2.rows()*j+i];
+					// _mat3[i][colb+j] = _mat2[i][j]
+					_mat3.atr(i,colb+j) = _mat2.at(i,j);
 				}
 			}
 		}
 
 		// _mat3 = [_mat1 ; _mat2]
-		static inline bool combine2(const _Matrix& _mat1, const _Matrix& _mat2, const _Matrix& _mat3)
+		static inline bool combineCol(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
 			if(_mat1.cols() != _mat2.cols())
 				return false;
@@ -281,125 +274,95 @@ namespace MatrixLib
 				for (unsigned int i = 0; i < _mat1.rows(); i++)
 				{
 					// _mat3[i][j] = _mat1[i][j]
-					_mat3.data[_mat3.rows()*j+i] = _mat1.data[_mat1.rows()*j+i];
+					_mat3.atr(i,j) = _mat1.at(i,j);
 				}
 
-				for (unsigned int i = _mat1.rows(); i < _mat2.rows(); i++)
+				unsigned int rowb = _mat2.rows();
+				for (unsigned int i = 0; i < _mat2.rows(); i++)
 				{
-					// _mat3[i][j] = _mat2[i][j]
-					_mat3.data[_mat3.rows()*j+i] = _mat2.data[_mat2.rows()*j+i];
+					// _mat3[rowb+i][j] = _mat2[i][j]
+					_mat3.atr(rowb+i,j) = _mat2.at(i,j);
 				}
 			}
 		}
 
 	public:
-		inline void copy(const _Matrix& _mat)
+		inline unsigned int rowsEnd()
 		{
-			if(_mat.assert() == true)
+			return (rows() - 1);
+		}
+
+		inline unsigned int colsEnd()
+		{
+			return (cols() - 1);
+		}
+
+	public:
+		inline void setAll(Number _number)
+		{
+			for(unsigned int n = 0; n < cols()*rows(); n++)
 			{
-				alloc(_mat.nRow, _mat.nCol);
-				memcpy(sizeof(Number)*nRow*nCol, _mat.data, data);
+				atr(n) = _number;
 			}
 		}
 
-		inline unsigned int rows()
+		inline void setAll(Number* _number)
 		{
-			return nRow;
+			setAll(*_number);
 		}
 
-		inline unsigned int cols()
+		inline void setZeros(unsigned int _row, unsigned int _col)
 		{
-			return nCol;
+			resize(_row, _col);
+			setAll((Number)0);
 		}
 
-		inline bool assert()
+		inline void setOnes(unsigned int _row, unsigned int _col)
 		{
-			return (nRow != 0 && nCol != 0 && data != NULL);
+			resize(_row, _col);
+			setAll((Number)1);
 		}
 
-		inline void resize(unsigned int _row, unsigned int _col)
+		inline bool isEqual(Number _number)
 		{
-			return alloc(_row, _col);
-		}
-
-		inline bool reshape(unsigned int _row, unsigned int _col)
-		{
-			if(nRow*nCol != _row*_col)
-				return false;
-
-			nRow = _row;
-			nCol = _col;
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					if(at(i,j) != _number)
+						return false;
+				}
+			}
+			// all i,j: data[i][j] == _number
 			return true;
 		}
 
-	public:
-		// get value
-		inline Number at(unsigned int _n)
+		inline bool isZeros()
 		{
-			return data[_n];
+			isEqual((Number)0);
 		}
 
-		inline Number at(unsigned int _i, unsigned int _j)
+		inline bool isOnes()
 		{
-			return data[nRow*_j+_i];
-		}
-
-		inline Number& atr(unsigned int _n)
-		{
-			return data[_n];
-		}
-
-		inline Number& atr(unsigned int _i, unsigned int _j)
-		{
-			return data[nRow*_j+_i];
-		}
-
-		inline Number* atp(unsigned int _n)
-		{
-			return &(data[_n]);
-		}
-
-		inline Number* atp(unsigned int _i, unsigned int _j)
-		{
-			return &(data[nRow*_j+_i]);
-		}
-
-		// set value
-		inline void set(unsigned int _n, Number _number)
-		{
-			data[_n] = _number;
-		}
-
-		inline void set(unsigned int _i, unsigned int _j, Number _number)
-		{
-			data[nRow*_j+_i] = _number;
-		}
-
-		inline void setp(unsigned int _n, Number* _number)
-		{
-			data[_n] = *_number;
-		}
-
-		inline void setp(unsigned int _i, unsigned int _j, Number* _number)
-		{
-			data[nRow*_j+_i] = *_number;
+			isEqual((Number)1);
 		}
 
 	public:
+		// rows
 		inline bool getRow(unsigned int _rowb, unsigned int _rowe, _Matrix& _mat)
 		{
-			if(nRow < _rowb || nRow < _rowe
+			if(!(_rowb < rows()) || !(_rowe < rows())
 				|| !(_rowb <= _rowe))
 				return false;
 
-			unsigned int rows = _rowe - _rowb + 1;
-			_mat.alloc(rows, nCol);
-			for(unsigned int i = 0; i < rows; i++)
+			unsigned int nrow = _rowe - _rowb + 1;
+			_mat.alloc(nrow, cols());
+			for(unsigned int i = 0; i < nrow; i++)
 			{
-				for(unsigned int j = 0; j < nCol; j++)
+				for(unsigned int j = 0; j < cols(); j++)
 				{
 					// _mat.data[i][j] = data[_rowb+i][j]
-					_mat.data[rows*j+i] = data[nRow*j+(_rowb+i)];
+					_mat.atr(i,j) = at(_rowb+i,j);
 				}
 			}
 
@@ -411,41 +374,41 @@ namespace MatrixLib
 			return getRow(_row, _row, _mat);
 		}
 
-		inline bool setRow(unsigned int _rowb, unsigned in _rowe, const _Matrix& _mat)
+		inline bool setRow(unsigned int _rowb, unsigned int _rowe, _Matrix& _mat)
 		{
-			if(nRow < _rowb || nRow < _rowe
+			if(!(_rowb < rows()) || !(_rowe < rows())
 				|| !(_rowb <= _rowe))
 				return false;
 
-			unsigned int rows = _rowe - _rowb + 1;
-			if(cols() != _mat.cols() || _mat.rows() != rows)
+			unsigned int nrow = _rowe - _rowb + 1;
+			if(cols() != _mat.cols() || _mat.rows() != nrow)
 				return false;
 
-			for(unsigned int i = 0; i < rows; i++)
+			for(unsigned int i = 0; i < nrow; i++)
 			{
-				for(unsigned int j = 0; j < nCol; j++)
+				for(unsigned int j = 0; j < cols(); j++)
 				{
 					// data[_rowb+i][j] = _mat.data[i][j];
-					data[nRow*j+(_rowb+i)] = _mat.data[_mat.nRow*j+i];
+					atr(_rowb+i,j) = _mat.at(i,j);
 				}
 			}
 
 			return true;
 		}
 
-		inline bool setRow(unsigned int _rowb, unsigned in _rowe, _Number _number)
+		inline bool setRow(unsigned int _rowb, unsigned int _rowe, _Number _number)
 		{
-			if(nRow < _rowb || nRow < _rowe
+			if(!(_rowb < rows()) || !(_rowe < rows())
 				|| !(_rowb <= _rowe))
 				return false;
 
-			unsigned int rows = _rowe - _rowb + 1;
-			for(unsigned int i = 0; i < rows; i++)
+			unsigned int nrow = _rowe - _rowb + 1;
+			for(unsigned int i = 0; i < nrow; i++)
 			{
-				for(unsigned int j = 0; j < nCol; j++)
+				for(unsigned int j = 0; j < cols(); j++)
 				{
 					// data[_rowb+i][j] = _number
-					data[nRow*j+(_rowb+i)] = _number;
+					atr(_rowb+i,j) = _number;
 				}
 			}
 
@@ -457,20 +420,21 @@ namespace MatrixLib
 			return setRow(_row, _row, _number);
 		}
 
+		// columns
 		inline bool getCol(unsigned int _colb, unsigned int _cole, _Matrix& _mat)
 		{
-			if(nCol < _colb || nCol < _cole
+			if(!(_colb < cols()) || !(_cole < cols())
 				|| !(_colb <= _cole))
 				return false;
 
-			unsigned int cols = _cole - _colb + 1;
-			_mat.alloc(nRow, cols);
-			for(unsigned int i = 0; i < nRow; i++)
+			unsigned int ncol = _cole - _colb + 1;
+			_mat.alloc(rows(), ncol);
+			for(unsigned int i = 0; i < rows(); i++)
 			{
-				for(unsigned int j = 0; j < cols; j++)
+				for(unsigned int j = 0; j < ncol; j++)
 				{
 					// _mat.data[i][j] = data[i][_colb+j]
-					_mat.data[nRow*j+i] = data[nRow*j+(_colb+i)];
+					_mat.atr(i,j) = at(i,_colb+j);
 				}
 			}
 
@@ -482,41 +446,41 @@ namespace MatrixLib
 			return getCol(_col, _col, _mat);
 		}
 
-		inline bool setCol(unsigned int _colb, unsigned in _cole, const _Matrix& _mat)
+		inline bool setCol(unsigned int _colb, unsigned int _cole, _Matrix& _mat)
 		{
-			if(nCol < _colb || nCol < _cole
+			if(!(_colb < cols()) || !(_cole < cols())
 				|| !(_colb <= _cole))
 				return false;
 
-			unsigned int cols = _cole - _colb + 1;
-			if(rows() != _mat.rows() || _mat.cols() != cols)
+			unsigned int ncol = _cole - _colb + 1;
+			if(rows() != _mat.rows() || _mat.cols() != ncol)
 				return false;
 
-			for(unsigned int j = 0; j < cols; j++)
+			for(unsigned int j = 0; j < ncol; j++)
 			{
-				for(unsigned int i = 0; i < nRow; i++)
+				for(unsigned int i = 0; i < rows(); i++)
 				{
 					// data[i][_colb+j] = _mat.data[i][j];
-					data[nRow*(_colb+j)+i] = _mat.data[_mat.nRow*j+i];
+					atr(i,_colb+j) = _mat.at(i,j);
 				}
 			}
 
 			return true;
 		}
 
-		inline bool setCol(unsigned int _colb, unsigned in _cole, _Number _number)
+		inline bool setCol(unsigned int _colb, unsigned int _cole, _Number _number)
 		{
-			if(nCol < _colb || nCol < _cole
+			if(!(_colb < cols()) || !(_cole < cols())
 				|| !(_colb <= _cole))
 				return false;
 
-			unsigned int cols = _cole - _colb + 1;
-			for(unsigned int j = 0; j < cols; j++)
+			unsigned int ncol = _cole - _colb + 1;
+			for(unsigned int j = 0; j < ncol; j++)
 			{
-				for(unsigned int i = 0; i < nRow; i++)
+				for(unsigned int i = 0; i < rows(); i++)
 				{
 					// data[i][_colb+j] = _number;
-					data[nRow*(_colb+j)+i] = _number;
+					atr(i,_colb+j) = _number;
 				}
 			}
 
@@ -529,261 +493,244 @@ namespace MatrixLib
 		}
 
 	public:
-		inline void setAll(Number _number)
+		// data = [data[0~_rowb-1][:] ; _mat ; data[_rowb:end][:]]
+		inline bool insertRow(unsigned int _rowb, _Matrix& _mat)
 		{
-			for(unsigned int n = 0; n < nCol*nRow; n++)
+			if(!(cols() == _mat.cols())
+				|| !(_rowb < rows()))
+				return false;
+
+			unsigned int bfrow =  rows();
+			unsigned int insrow = _mat.rows();
+			_Matrix mat1, mat2;
+			
+			getRow(0, _rowb-1, mat1);
+			getRow(_rowb, bfrow-1, mat2);
+			
+			resize(bfrow+insrow, _mat.cols());
+			
+			setRow(0, _rowb-1, mat1);
+			setRow(_rowb, _rowb+insrow-1, _mat);
+			setRow(_rowb+insrow, rows()-1, mat2);
+			return true;
+		}
+
+		// data = [data[:][0~_colb] _mat data[:][_colb:end]]
+		inline bool insertCol(unsigned int _colb, _Matrix& _mat)
+		{
+			if(!(rows() == _mat.rows())
+				|| !(_colb < cols()))
+				return false;
+
+			unsigned int bfcol = cols();
+			unsigned int inscol = _mat.cols();
+			_Matrix mat1, mat2;
+
+			getCol(0, _colb-1, mat1);
+			getCol(_colb, bfcol-1, mat2);
+
+			resize(_mat.rows(), bfcol+inscol);
+
+			setCol(0, _colb-1, mat1);
+			setCol(_colb, _colb+inscol-1, _mat);
+			setCol(_colb+inscol, cols()-1, mat2);
+			return true;
+		}
+
+
+	public:
+		inline bool meanRow(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return false;
+
+			_mat.resize(rows(), 1);
+			for (unsigned int i = 0; i < rows(); i++)
 			{
-				data[n] = _number;
+				_Number sum = 0;
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					// sum all in one row
+					sum += at(i,j);
+				}
+				_mat.atr(i,1) = sum / cols();
 			}
 		}
 
-		inline void setAll(Number* _number)
+		inline bool meanCol(_Matrix& _mat)
 		{
-			setAll(*_number);
+			if(assert() == false)
+				return false;
+
+			_mat.resize(cols(), 1);
+			for (unsigned int j = 0; j < cols(); j++)
+			{
+				_Number sum = at(0,j);
+				for (unsigned int i = 0; i < rows(); i++)
+				{
+					// sum all in one row
+					sum += at(i,j);
+				}
+				_mat.atr(j,1) = sum / rows();
+			}
 		}
 
-		inline void setZeros()
+		inline bool maxRow(_Matrix& _mat)
 		{
-			setAll(0);
+			if(assert() == false)
+				return false;
+
+			_mat.resize(rows(), 1);
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				_Number max = at(i,0);
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					if(at(i,j) > max)
+						max = at(i,j);
+				}
+				_mat.atr(i,1) = max;
+			}
 		}
 
-		//public:
-		//	inline bool swapRow(unsigned int _row1, unsigned int _row2)
-		//	{
-		//		if(isValid() == true && _row1 < nRow && _row2 < nRow)
-		//		{
-		//			Number tmp;
-		//			for(unsigned int j = 0; j < nCol; j++)
-		//			{
-		//				tmp = data[_row1*nRow+j];
-		//				data[_row1*nRow+j] = data[_row2*nRow+j];
-		//				data[_row2*nRow+j] = tmp;
-		//			}
-		//			// finish
-		//			return true;
-		//		}
+		inline bool maxCol(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return false;
 
-		//		return false;
-		//	}
+			_mat.resize(cols(), 1);
+			for (unsigned int j = 0; j < cols(); j++)
+			{
+				_Number max = at(0,j);
+				for (unsigned int i = 0; i < rows(); i++)
+				{
+					if(at(i,j) > max)
+						max = at(i,j);
+				}
+				_mat.atr(j,1) = max;
+			}
+		}
 
-		//	inline bool swapColumn(unsigned int _column1, unsigned int _column2)
-		//	{
-		//		if(isValid() == true && _column1 < nCol && _column2 < nCol)
-		//		{
-		//			Number tmp;
-		//			for(unsigned int i = 0; i < nRow; i++)
-		//			{
-		//				tmp = data[i*nRow+_column1];
-		//				data[i*nRow+_column1] = data[i*nRow+_column2];
-		//				data[i*nRow+_column2] = tmp;
-		//			}
-		//			// finish
-		//			return true;
-		//		}
+		inline bool minRow(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return false;
 
-		//		return false;
-		//	}
+			_mat.resize(rows(), 1);
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				_Number min = at(i,0);
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					if(at(i,j) < min)
+						min = at(i,j);
+				}
+				_mat.atr(i,1) = min;
+			}
+		}
 
-		//	// elementary transformation: matrix[_row_dst][*]=matrix[dst][*]+matrix[_row_src][*]*_coe
-		//	inline bool transformateRow(unsigned int _row_src, const Number& _coe, unsigned int _row_dst)
-		//	{
-		//		if(isValid() == false || 
-		//			!(_row_src < nRow) || 
-		//			!(_row_dst < nRow))
-		//		{
-		//			return false;
-		//		}
+		inline bool minCol(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return false;
 
-		//		for(unsigned int j = 0; j < nCol; j++)
-		//		{
-		//			data[_row_dst*nRow+j] += data[_row_src*nRow+j] * _coe;
-		//		}
+			_mat.resize(cols(), 1);
+			for (unsigned int j = 0; j < cols(); j++)
+			{
+				_Number min = at(0,j);
+				for (unsigned int i = 0; i < rows(); i++)
+				{
+					if(at(i,j) < min)
+						min = at(i,j);
+				}
+				_mat.atr(j,1) = min;
+			}
+		}
 
-		//		return true;
-		//	}
+	public:
+		inline bool swapRow(unsigned int _row1, unsigned int _row2)
+		{
+			if(assert() == false
+				|| !(_row1 < rows()) || !(_row2 < rows()))
+				return false;
 
-		//	// elementary transformation: matrix[*][_row_dst]=matrix[*][dst]+matrix[*][_row_src]*_coe
-		//	inline bool transformateCol(unsigned int _col_src, const Number& _coe, unsigned int _col_dst)
-		//	{
-		//		if(isValid() == false || 
-		//			!(_col_src < nCol) || 
-		//			!(_col_dst < nCol))
-		//		{
-		//			return false;
-		//		}
+			_Number tmp;
+			for(unsigned int j = 0; j < cols(); j++)
+			{
+				// data[_row1][j] <==> data[_row2][j]
+				tmp = at(_row1,j);
+				atr(_row1,j) = at(_row2,j);
+				atr(_row2,j) = tmp;
+			}
 
-		//		for(unsigned int i = 0; i < nRow; i++)
-		//		{
-		//			data[i*nRow+_col_dst] += data[i*nRow+_col_dst] * _coe;
-		//		}
+			return true;
+		}
 
-		//		return true;
-		//	}
+		inline bool swapCol(unsigned int _col1, unsigned int _col2)
+		{
+			if(assert() == false
+				|| !(_col1 < cols()) || !(_col2 < cols()))
+				return false;
 
-		//	inline bool deleteRow(unsigned int _row)
-		//	{
-		//		if(_row < nRow)
-		//		{
-		//			// save a temporary copy
-		//			_Matrix mat(*this);
-		//			
-		//			// resize matrix data buffer
-		//			alloc(nRow-1, nCol);
-		//			// assign value
-		//			for(unsigned int i = 0; i < nRow; i++)
-		//			{
-		//				for(unsigned int j = 0; j < nCol; j++)
-		//				{
-		//					data[i*nRow+j] = (i < _row) ? mat.data[i*nRow+j] : mat.data[(i+1)*nRow+j];
-		//				}
-		//			}
-		//			// finish
-		//			return true;
-		//		}
-		//		// invalid row
-		//		return false;
-		//	}
+			_Number tmp = 0;
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				// data[i][_col1] <==> data[i][_col2]
+				tmp = at(i,_col1);
+				atr(i,_col1) = at(i,_col2);
+				atr(i,_col2) = tmp;
+			}
 
-		//	inline bool deleteCol(unsigned int _col)
-		//	{
-		//		if(_col < nRow)
-		//		{
-		//			// save a temporary copy
-		//			_Matrix mat(*this);
+			return true;
+		}
 
-		//			// resize matrix data buffer
-		//			alloc(nRow, nCol-1);
-		//			// assign value
-		//			for(unsigned int j = 0; j < nCol; j++)
-		//			{
-		//				for(unsigned int i = 0; i < nRow; i++)
-		//				{
-		//					data[i*nRow+j] = (j < _col) ? mat.data[i*nRow+j] : mat.data[i*nRow+(j+1)];
-		//				}
-		//			}
-		//			// finish
-		//			return true;
-		//		}
-		//		// invalid column
-		//		return false;
-		//	}
+	public:
+		inline void getTranspose(_Matrix& _mat)
+		{
+			if(assert() == false)
+			{
+				// zeros matrix
+				_mat.free();
+			}
 
-		//public:
-		//	inline _Matrix& operator = (const _Matrix& _matrix) const
-		//	{
-		//		copy(_matrix);
-		//		return (*this);
-		//	}
+			_mat.resize(cols(), rows());
+			for (unsigned int i = 0; i < cols(); i++)
+			{
+				for (unsigned int j = 0; j < rows(); j++)
+				{
+					// _mat.data = data'
+					_mat.atr(i,j) = at(j,i);
+				}
+			}
+		}
 
-		//public:
-		//	friend inline bool operator == (const _Matrix& _matrix1, const _Matrix& _matrix2)
-		//	{
-		//		
-		//	}
-
-		//	friend inline bool operator != (const _Matrix& _matrix1, const _Matrix& _matrix2)
-		//	{
-		//		if(_matrix1.nRow != _matrix2.nRow 
-		//			|| _matrix1.nCol != _matrix2.nCol)
-		//			return true;
-
-		//		unsigned int size = _matrix1.nRow * _matrix1.nCol;
-		//		for(unsigned int n = 0; n < size; n++)
-		//		{
-		//			if(_matrix1.data[n] != _matrix2.data[n])
-		//				return true;
-		//		}
-		//		return false;
-		//	}
-
-		//public:
-		//	friend inline const _Matrix& operator + (const _Matrix& _matrix1, const _Matrix& _matrix2)
-		//	{
-		//		_Matrix& mat = _Matrix::object();
-		//		mat.free();
-		//		Matrix::add(_matrix1, _matrix2, mat);
-		//		return mat;
-		//	}
-
-		//	friend inline const _Matrix& operator - (const _Matrix& _matrix1, const _Matrix& _matrix2)
-		//	{
-		//		_Matrix& mat = _Matrix::object();
-		//		mat.free();
-		//		Matrix::sub(_matrix1, _matrix2, mat);
-		//		return mat;
-		//	}
-
-		//	friend inline const _Matrix& operator * (const _Matrix& _matrix1, const _Matrix& _matrix2)
-		//	{
-		//		_Matrix& mat = _Matrix::object();
-		//		mat.free();
-		//		Matrix::multi(_matrix1, _matrix2, mat);
-		//		return mat;
-		//	}
-
-		//	friend inline const _Matrix& operator / (const _Matrix& _matrix1, const _Matrix& _matrix2)
-		//	{
-		//		_Matrix& mat = _Matrix::object();
-		//		
-		//		return mat;
-		//	}
-
-		//public:
-		//	inline _Matrix& operator += (const _Matrix& _matrix)
-		//	{
-		//		if(nRow == _matrix.nRow || nCol == _matrix.nCol)
-		//		{
-		//			for(unsigned int i = 0; i < nRow; i++)
-		//			{
-		//				for(unsigned int j = 0; j < nCol; j++)
-		//				{
-		//					data[nRow*i+j] += _matrix.data[nRow*i+j];	
-		//				}
-		//			}
-		//		}
-		//		return (*this);
-		//	}
-
-		//	inline _Matrix& operator -= (const _Matrix& _matrix)
-		//	{
-		//		if(nRow == _matrix.nRow || nCol == _matrix.nCol)
-		//		{
-		//			for(unsigned int i = 0; i < nRow; i++)
-		//			{
-		//				for(unsigned int j = 0; j < nCol; j++)
-		//				{
-		//					data[nRow*i+j] -= _matrix.data[nRow*i+j];	
-		//				}
-		//			}
-		//		}
-		//		return (*this);
-		//	}
-
-		//	inline _Matrix& operator *= (const _Matrix& _matrix)
-		//	{
-		//		if(nCol == _matrix.nRow)
-		//		{
-		//			_Matrix tmp(*this);
-		//			for(unsigned int i = 0; i < nRow; i++)
-		//			{
-		//				for(unsigned int j = 0; j < _matrix.nCol; j++)
-		//				{
-		//					for(unsigned int k = 0; k < nCol; k++)
-		//					{
-		//						data[nRow*i+j] += tmp.data[tmp.nRow*i+k] * _matrix.data[_matrix.nRow*k+j];
-		//					}
-		//				}
-		//			}
-		//		}
-		//		return (*this);
-		//	}
+	public:
+		inline _Matrix& operator = (_Matrix& _mat) const
+		{
+			copy(_mat);
+			return (*this);
+		}
 
 	public:
 		inline void toString()
 		{
-
+			string buffer;
+			ostringstream sstr;
+			for(unsigned int i = 0; i < rows(); i++)
+			{
+				for(unsigned int j = 0; j < cols(); j++)
+				{
+					sstr << at(i,j) << ' ';
+				}
+				sstr << '\n';
+			}
+			// output matrix
+			cout << sstr.str() << endl;
 		}
-	};// end for class Matrix
+	};
 }
+
+
+
 
 #endif
