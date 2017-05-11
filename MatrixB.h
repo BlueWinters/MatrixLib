@@ -92,7 +92,14 @@ namespace MatrixLib
 
 		inline void resize(unsigned int _row, unsigned int _col)
 		{
-			return alloc(_row, _col);
+			if(_row == 0 || _col == 0)
+			{
+				free();
+			}
+			else
+			{
+				alloc(_row, _col);
+			}
 		}
 
 		inline bool reshape(unsigned int _row, unsigned int _col)

@@ -16,7 +16,9 @@ namespace MatrixLib
 		// type define Matrix and Number
 		typedef typename Matrix<Number> _Matrix;
 		typedef typename Number _Number;
-		typedef void (*Function)(const Number&);
+	public:
+		typedef unsigned int _Idx;
+		typedef void (*_AccessFunc)(_Number);
 
 	public:
 		Matrix() :MatrixB()
@@ -92,7 +94,7 @@ namespace MatrixLib
 		// _mat3 = _mat1 + _mat2
 		static inline bool toAdd(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compare(_mat1, _mat2))
+			if(!_Matrix::compareSize(_mat1, _mat2))
 				return false;
 
 			unsigned int nrow = _mat1.rows();
@@ -123,7 +125,7 @@ namespace MatrixLib
 		// _mat3 = _mat1 - _mat2
 		static inline void toSub(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compare(_mat1, _mat2))
+			if(!_Matrix::compareSize(_mat1, _mat2))
 				return false;
 
 			unsigned int nrow = _mat1.rows();
@@ -196,7 +198,7 @@ namespace MatrixLib
 		// _mat3 = _mat1 .* _mat2
 		static inline void toDot(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compare(_mat1, _mat2))
+			if(!_Matrix::compareSize(_mat1, _mat2))
 				return false;
 
 			unsigned int nrow = _mat1.rows();
@@ -282,6 +284,29 @@ namespace MatrixLib
 				{
 					// _mat3[rowb+i][j] = _mat2[i][j]
 					_mat3.atr(rowb+i,j) = _mat2.at(i,j);
+				}
+			}
+		}
+
+	public:
+		inline void traversalRow(_AccessFunc _func)
+		{
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					_func(at(i,j));
+				}
+			}
+		}
+
+		inline void traversalCol(_AccessFunc _func)
+		{
+			for (unsigned int j = 0; j < cols(); j++)
+			{
+				for (unsigned int i = 0; i < rows(); i++)
+				{
+					_func(at(i,j));
 				}
 			}
 		}
@@ -515,6 +540,26 @@ namespace MatrixLib
 			return true;
 		}
 
+		// data = [data[0~_rowb-1][:] ; data[_rowe+1:end][:]]
+		inline bool deleteRow(unsigned int _rowb, unsigned int _rowe)
+		{
+			if(!(_rowb < rows()) || !(_rowe < rows())
+				|| !(_rowb <= _rowe) || assert() == false)
+				return false;
+
+			_Matrix mat1, mat2;
+			
+			getRow(0, _rowb-1, mat1);
+			getRow(_rowe, rows()-1, mat2);
+			
+			unsigned int newrow = rows() - (_rowe - _rowe + 1);
+			resize(newrow, cols());
+			setRow(0, _rowb-1, mat1);
+			setRow(_rowb, newrow-1, mat2);
+
+			return true;
+		}
+
 		// data = [data[:][0~_colb] _mat data[:][_colb:end]]
 		inline bool insertCol(unsigned int _colb, _Matrix& _mat)
 		{
@@ -537,8 +582,68 @@ namespace MatrixLib
 			return true;
 		}
 
+		// data = [data[:][0~_colb-1] data[:][_cole+1:end]]
+		inline bool deleteCol(unsigned int _colb, unsigned int _cole)
+		{
+			if(!(_colb < cols()) || !(_cole < cols())
+				|| !(_colb <= _cole) || assert() == false)
+				return false;
+
+			_Matrix mat1, mat2;
+
+			getCol(0, _colb-1, mat1);
+			getCol(_cole, cols()-1, mat2);
+
+			unsigned int newcol = cols() - (_cole - _cole + 1);
+			resize(newcol, cols());
+			setRow(0, _colb-1, mat1);
+			setRow(_colb, newcol-1, mat2);
+			
+			return true;
+		}
+
 
 	public:
+		inline bool sumRow(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return false;
+
+			_mat.resize(rows(), 1);
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				_Number sum = 0;
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					// sum all in one row
+					sum += at(i,j);
+				}
+				_mat.atr(i,1) = sum;
+			}
+			//
+			return true;
+		}
+
+		inline bool sumCol(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return false;
+
+			_mat.resize(cols(), 1);
+			for (unsigned int j = 0; j < cols(); j++)
+			{
+				_Number sum = at(0,j);
+				for (unsigned int i = 0; i < rows(); i++)
+				{
+					// sum all in one row
+					sum += at(i,j);
+				}
+				_mat.atr(j,1) = sum / rows();
+			}
+			//
+			return true;
+		}
+
 		inline bool meanRow(_Matrix& _mat)
 		{
 			if(assert() == false)
@@ -553,8 +658,10 @@ namespace MatrixLib
 					// sum all in one row
 					sum += at(i,j);
 				}
-				_mat.atr(i,1) = sum / cols();
+				_mat.atr(i,1) = sum;
 			}
+			//
+			return true;
 		}
 
 		inline bool meanCol(_Matrix& _mat)
@@ -573,6 +680,8 @@ namespace MatrixLib
 				}
 				_mat.atr(j,1) = sum / rows();
 			}
+			//
+			return true;
 		}
 
 		inline bool maxRow(_Matrix& _mat)
@@ -591,6 +700,8 @@ namespace MatrixLib
 				}
 				_mat.atr(i,1) = max;
 			}
+			//
+			return true;
 		}
 
 		inline bool maxCol(_Matrix& _mat)
@@ -609,6 +720,8 @@ namespace MatrixLib
 				}
 				_mat.atr(j,1) = max;
 			}
+			//
+			return true;
 		}
 
 		inline bool minRow(_Matrix& _mat)
@@ -627,6 +740,8 @@ namespace MatrixLib
 				}
 				_mat.atr(i,1) = min;
 			}
+			//
+			return true;
 		}
 
 		inline bool minCol(_Matrix& _mat)
@@ -644,6 +759,105 @@ namespace MatrixLib
 						min = at(i,j);
 				}
 				_mat.atr(j,1) = min;
+			}
+			//
+			return true;
+		}
+
+	public:
+		inline void sortRowAsc(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return;
+
+			_mat.resize(rows(), cols());
+			for(unsigned int i = 0; i < rows(); i++)
+			{
+				for(unsigned int j = 0; j < cols(); j++)
+				{
+					for(unsigned int k = cols()-1; k > j; k--)
+					{
+						if(at(i,k) < at(i,k-1))
+						{
+							// swap value
+							_Number tmp = at(i,k-1);
+							atr(i,k-1) = at(i,k);
+							atr(i,k) = tmp;
+						}
+					}
+				}
+			}
+		}
+		
+		inline void sortRowDec(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return;
+
+			_mat.resize(rows(), cols());
+			for(unsigned int i = 0; i < rows(); i++)
+			{
+				for(unsigned int j = 0; j < cols(); j++)
+				{
+					for(unsigned int k = cols()-1; k > j; k--)
+					{
+						if(at(i,k) > at(i,k-1))
+						{
+							// swap value
+							_Number tmp = at(i,k-1);
+							atr(i,k-1) = at(i,k);
+							atr(i,k) = tmp;
+						}
+					}
+				}
+			}
+		}
+
+		inline void sortColAsc(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return;
+
+			_mat.resize(rows(), cols());
+			for(unsigned int j = 0; j < rows(); j++)
+			{
+				for(unsigned int i = 0; i < cols(); i++)
+				{
+					for(unsigned int k = rows()-1; k > i; k--)
+					{
+						if(at(k,j) < at(k-1,j))
+						{
+							// swap value
+							_Number tmp = at(k-1,j);
+							atr(k-1,j) = at(k,j);
+							atr(k,j) = tmp;
+						}
+					}
+				}
+			}
+		}
+
+		inline void sortColDec(_Matrix& _mat)
+		{
+			if(assert() == false)
+				return;
+
+			_mat.resize(rows(), cols());
+			for(unsigned int j = 0; j < rows(); j++)
+			{
+				for(unsigned int i = 0; i < cols(); i++)
+				{
+					for(unsigned int k = rows()-1; k > i; k--)
+					{
+						if(at(k,j) > at(k-1,j))
+						{
+							// swap value
+							_Number tmp = at(k-1,j);
+							atr(k-1,j) = at(k,j);
+							atr(k,j) = tmp;
+						}
+					}
+				}
 			}
 		}
 
@@ -705,6 +919,59 @@ namespace MatrixLib
 		}
 
 	public:
+		inline void toMore(_Matrix& _mat, _Matrix& _to)
+		{
+			if(assert() == false || _mat.assert() == false
+				|| _Matrix::compareSize(*this, _mat) == false)
+				return;
+			
+			_to.resize(rows(), cols());
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					// compare value and return logistic result
+					_to.atr(i,j) = (at(i,j) > _mat.atr(i,j)) ? 1 : 0;
+				}
+			}
+		}
+
+		inline void toLess(_Matrix& _mat, _Matrix& _to)
+		{
+			if(assert() == false || _mat.assert() == false
+				|| _Matrix::compareSize(*this, _mat) == false)
+				return;
+
+			_to.resize(rows(), cols());
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					// compare value and return logistic result
+					_to.atr(i,j) = (at(i,j) < _mat.atr(i,j)) ? 1 : 0;
+				}
+			}
+		}
+
+		inline void toEqual(_Matrix& _mat, _Matrix& _to)
+		{
+			if(assert() == false || _mat.assert() == false
+				|| _Matrix::compareSize(*this, _mat) == false)
+				return;
+
+			_to.resize(rows(), cols());
+			for (unsigned int i = 0; i < rows(); i++)
+			{
+				for (unsigned int j = 0; j < cols(); j++)
+				{
+					// compare value and return logistic result
+					_to.atr(i,j) = (at(i,j) == _mat.atr(i,j)) ? 1 : 0;
+				}
+			}
+		}
+
+
+	public:
 		inline _Matrix& operator = (_Matrix& _mat) const
 		{
 			copy(_mat);
@@ -714,7 +981,6 @@ namespace MatrixLib
 	public:
 		inline void toString()
 		{
-			string buffer;
 			ostringstream sstr;
 			for(unsigned int i = 0; i < rows(); i++)
 			{
