@@ -8,4 +8,12 @@ using namespace std;
 using namespace MatrixLib;
 
 typedef Matrix<double> dMatrix;
-typedef Matrix<int> iMatrix;
+
+
+void testMatrix_static()
+{
+	dMatrix mat1;
+	dMatrix mat2;
+
+
+}

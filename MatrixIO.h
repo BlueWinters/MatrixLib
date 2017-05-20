@@ -28,7 +28,7 @@ namespace MatrixLib
 	}
 
 	template<class Matrix>
-	void mat2File(const Matrix& _mat, char* _file)
+	void mat2Txt(const Matrix& _mat, char* _file)
 	{
 		std::fstream hfile(_file);
 		std::ostringstream buffer;
@@ -41,6 +41,12 @@ namespace MatrixLib
 		hfile << buffer.str() << endl;
 		hfile << str << endl;
 		hfile.close();
+	}
+
+	template<class Matrix>
+	void mat2Binary(const Matrix& _mat, char* _file)
+	{
+		i
 	}
 
 
