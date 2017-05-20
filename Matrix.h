@@ -4,7 +4,9 @@
 #define Matrix_h__
 
 #include <cmath>
+#include "Exception.h"
 #include "MatrixB.h"
+#include "Random.h"
 
 
 namespace MatrixLib
@@ -18,7 +20,7 @@ namespace MatrixLib
 		typedef typename Number _Number;
 	public:
 		typedef unsigned int _Idx;
-		typedef void (*_AccessFunc)(_Number);
+		typedef _Number (*_AccessFunc)(_Number);
 
 	public:
 		Matrix() :MatrixB()
@@ -54,9 +56,8 @@ namespace MatrixLib
 		// compare matrix size and value
 		static inline bool isEqual(const _Matrix& _mat1, const _Matrix& _mat2)
 		{
-			if(_mat1.rows() != _mat2.rows() 
-				|| _mat1.cols() != _mat2.cols())
-				return false;
+			if(_Matrix::compareSize(_mat1, _mat2) == false)
+				throw MatrixThrow_IsEqual;
 
 			unsigned int size = _mat1.rows() * _mat1.cols();
 			for(unsigned int n = 0; n < size; n++)
@@ -72,7 +73,7 @@ namespace MatrixLib
 		{
 			if(!_mat1.assert() || !_mat2.assert())
 				return false;
-			return (_mat1.data == _mat2.data);
+			return (_mat1.datap() == _mat2.datap());
 		}
 
 		// swap data
@@ -94,8 +95,8 @@ namespace MatrixLib
 		// _mat3 = _mat1 + _mat2
 		static inline bool toAdd(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compareSize(_mat1, _mat2))
-				return false;
+			if(_Matrix::compareSize(_mat1, _mat2) == false)
+				throw MatrixThrow_ToAdd;
 
 			unsigned int nrow = _mat1.rows();
 			unsigned int ncol = _mat1.cols();
@@ -125,8 +126,8 @@ namespace MatrixLib
 		// _mat3 = _mat1 - _mat2
 		static inline void toSub(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compareSize(_mat1, _mat2))
-				return false;
+			if(_Matrix::compareSize(_mat1, _mat2) == false)
+				throw MatrixThrow_ToSub;
 
 			unsigned int nrow = _mat1.rows();
 			unsigned int ncol = _mat1.cols();
@@ -171,7 +172,7 @@ namespace MatrixLib
 		static inline void toCross(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
 			if(_mat1.cols() != _mat2.rows())
-				return false;
+				throw MatrixThrow_ToCross;
 
 			unsigned int nrow = _mat1.rows();
 			unsigned int ncol = _mat2.cols();
@@ -188,7 +189,7 @@ namespace MatrixLib
 						z += _mat1.at(i,k) * _mat2.at(k,j);
 					}
 					// _mat[i][j] = z
-					_mat3.at(i,j) = z;
+					_mat3.atr(i,j) = z;
 				}
 			}
 
@@ -198,8 +199,8 @@ namespace MatrixLib
 		// _mat3 = _mat1 .* _mat2
 		static inline void toDot(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
-			if(!_Matrix::compareSize(_mat1, _mat2))
-				return false;
+			if(_Matrix::compareSize(_mat1, _mat2) == false)
+				throw MatrixThrow_ToDot;
 
 			unsigned int nrow = _mat1.rows();
 			unsigned int ncol = _mat1.cols();
@@ -208,8 +209,45 @@ namespace MatrixLib
 			{
 				_mat3.atr(n) = _mat1.at(n) * _mat2.at(n);
 			}
+		}
 
-			return true;
+		//
+		static inline void toDiv(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
+		{
+			if(_Matrix::compareSize(_mat1, _mat2) == false)
+				throw MatrixThrow_ToDiv;
+
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat3.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
+			{
+				_mat3.atr(n) = _mat1.at(n) / _mat2.at(n);
+			}
+		}
+
+		// _mat3 = _mat1 / _number
+		static inline void toDiv(_Matrix& _mat1, _Number _number, _Matrix& _mat3)
+		{
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat3.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
+			{
+				_mat3.atr(n) = _mat1.at(n) / _number;
+			}
+		}
+
+		// _mat3 = _number / _mat1
+		static inline void toDiv(_Matrix& _mat1, _Number _number, _Matrix& _mat3)
+		{
+			unsigned int nrow = _mat1.rows();
+			unsigned int ncol = _mat1.cols();
+			_mat3.alloc(nrow, ncol);
+			for(unsigned int n = 0; n < ncol*nrow; n++)
+			{
+				_mat3.atr(n) = _number / _mat1.at(n);
+			}
 		}
 
 		// _mat2 = _mat1 .* _number
@@ -244,7 +282,7 @@ namespace MatrixLib
 		static inline bool combineRow(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
 			if(_mat1.rows() != _mat2.rows())
-				return false;
+				throw MatrixThrow_CombineRow;
 
 			_mat3.resize(_mat1.rows(), _mat1.cols() + _mat2.cols());
 			for(unsigned int i = 0; i < _mat1.rows(); i++)
@@ -268,7 +306,7 @@ namespace MatrixLib
 		static inline bool combineCol(_Matrix& _mat1, _Matrix& _mat2, _Matrix& _mat3)
 		{
 			if(_mat1.cols() != _mat2.cols())
-				return false;
+				throw MatrixThrow_CombineCol;
 
 			_mat3.resize(_mat1.rows() + _mat2.rows(), _mat1.cols());
 			for(unsigned int j = 0; j < _mat1.cols(); j++)
@@ -288,9 +326,101 @@ namespace MatrixLib
 			}
 		}
 
+		public:
+			// abstract: _mat = this'
+			// get the transpose of current matrix
+			inline void getTranspose(_Matrix& _mat)
+			{
+				if(assert() == false)
+				{
+					// if this is zeros matrix
+					// then return a zero matrix
+					_mat.free();
+				}
+
+				_mat.resize(cols(), rows());
+				for (unsigned int i = 0; i < cols(); i++)
+				{
+					for (unsigned int j = 0; j < rows(); j++)
+					{
+						// _mat.data = data'
+						_mat.atr(i,j) = at(j,i);
+					}
+				}
+			}
+
+			// abstract: _mat = - this
+			inline void getNegtive(_Matrix& _mat)
+			{
+				if(assert() == false)
+				{
+					// if this is zeros matrix
+					// then return a zero matrix
+					_mat.free();
+				}
+
+				_mat.resize(cols(), rows());
+				for (unsigned int n = 0; n < cols(); n++)
+				{
+					_mat.atr(n) = - at(n);
+				}
+			}
+
+			// abstract: _mat = |this|
+			inline void getAbs(_Matrix& _mat)
+			{
+				if(assert() == false)
+				{
+					// if this is zeros matrix
+					// then return a zero matrix
+					_mat.free();
+				}
+
+				_mat.resize(cols(), rows());
+				for (unsigned int n = 0; n < cols(); n++)
+				{
+					_mat.atr(n) = abs(at(n));
+				}
+			}
+
 	public:
+		inline void traversalFunc(_AccessFunc _func, _Matrix& _mat)
+		{
+			if(_func == NULL)
+			{
+				// invalid access function
+				throw MatrixThrow_TraversalFunc;
+			}
+
+			_mat.resize(rows(), cols());
+			for (unsigned int n = 0; n < rows()*cols(); n++)
+			{
+				_mat.atr(n) = _func(at(n));
+			}
+		}
+
+		inline void traversalFunc(_AccessFunc _func)
+		{
+			if(_func == NULL)
+			{
+				// invalid access function
+				throw MatrixThrow_TraversalFunc;
+			}
+
+			for (unsigned int n = 0; n < rows()*cols(); n++)
+			{
+				atr(n) = _func(at(n));
+			}
+		}
+
 		inline void traversalRow(_AccessFunc _func)
 		{
+			if(_func == NULL)
+			{
+				// invalid access function
+				throw MatrixThrow_TraversalRow;
+			}
+
 			for (unsigned int i = 0; i < rows(); i++)
 			{
 				for (unsigned int j = 0; j < cols(); j++)
@@ -302,6 +432,12 @@ namespace MatrixLib
 
 		inline void traversalCol(_AccessFunc _func)
 		{
+			if(_func == NULL)
+			{
+				// invalid access function
+				throw MatrixThrow_TraversalCol;
+			}
+
 			for (unsigned int j = 0; j < cols(); j++)
 			{
 				for (unsigned int i = 0; i < rows(); i++)
@@ -323,6 +459,7 @@ namespace MatrixLib
 		}
 
 	public:
+		// set all as _number
 		inline void setAll(Number _number)
 		{
 			for(unsigned int n = 0; n < cols()*rows(); n++)
@@ -331,45 +468,60 @@ namespace MatrixLib
 			}
 		}
 
-		inline void setAll(Number* _number)
-		{
-			setAll(*_number);
-		}
-
+		// set all as 0
 		inline void setZeros(unsigned int _row, unsigned int _col)
 		{
 			resize(_row, _col);
 			setAll((Number)0);
 		}
 
+		// set all as 1
 		inline void setOnes(unsigned int _row, unsigned int _col)
 		{
 			resize(_row, _col);
 			setAll((Number)1);
 		}
 
-		inline bool isEqual(Number _number)
+		// randomly produce a uniform distributed matrix
+		inline void setUniformi(unsigned int _row, unsigned int _col)
 		{
-			for (unsigned int i = 0; i < rows(); i++)
+			std::vector<_Number> vec;
+			UniformInt<_Number> normal;
+
+			resize(_row, _col);
+			normal.sample(vec, _row*_col);
+			for(unsigned int n = 0; n < rows()*cols(); n++)
 			{
-				for (unsigned int j = 0; j < cols(); j++)
-				{
-					if(at(i,j) != _number)
-						return false;
-				}
+				atr(n) = vec[n];
 			}
-			// all i,j: data[i][j] == _number
-			return true;
 		}
 
-		inline bool isZeros()
+		// randomly produce a uniform distributed matrix
+		inline void setUniformf(unsigned int _row, unsigned int _col)
 		{
-			isEqual((Number)0);
+			std::vector<_Number> vec;
+			UniformFloat<_Number> normal;
+
+			resize(_row, _col);
+			normal.sample(vec, _row*_col);
+			for(unsigned int n = 0; n < rows()*cols(); n++)
+			{
+				atr(n) = vec[n];
+			}
 		}
 
-		inline bool isOnes()
+		// randomly produce a normal distributed matrix
+		inline void setNormal(unsigned int _row, unsigned int _col)
 		{
-			isEqual((Number)1);
+			std::vector<_Number> vec;
+			Normal<_Number> normal;
+
+			resize(_row, _col);
+			normal.sample(vec, _row*_col);
+			for(unsigned int n = 0; n < rows()*cols(); n++)
+			{
+				atr(n) = vec[n];
+			}
 		}
 
 	public:
@@ -378,7 +530,7 @@ namespace MatrixLib
 		{
 			if(!(_rowb < rows()) || !(_rowe < rows())
 				|| !(_rowb <= _rowe))
-				return false;
+				throw MatrixThrow_GetRow;
 
 			unsigned int nrow = _rowe - _rowb + 1;
 			_mat.alloc(nrow, cols());
@@ -403,7 +555,7 @@ namespace MatrixLib
 		{
 			if(!(_rowb < rows()) || !(_rowe < rows())
 				|| !(_rowb <= _rowe))
-				return false;
+				throw MatrixThrow_SetRow; 
 
 			unsigned int nrow = _rowe - _rowb + 1;
 			if(cols() != _mat.cols() || _mat.rows() != nrow)
@@ -425,7 +577,7 @@ namespace MatrixLib
 		{
 			if(!(_rowb < rows()) || !(_rowe < rows())
 				|| !(_rowb <= _rowe))
-				return false;
+				throw MatrixThrow_SetRow;
 
 			unsigned int nrow = _rowe - _rowb + 1;
 			for(unsigned int i = 0; i < nrow; i++)
@@ -450,7 +602,7 @@ namespace MatrixLib
 		{
 			if(!(_colb < cols()) || !(_cole < cols())
 				|| !(_colb <= _cole))
-				return false;
+				throw MatrixThrow_GetCol;
 
 			unsigned int ncol = _cole - _colb + 1;
 			_mat.alloc(rows(), ncol);
@@ -475,7 +627,7 @@ namespace MatrixLib
 		{
 			if(!(_colb < cols()) || !(_cole < cols())
 				|| !(_colb <= _cole))
-				return false;
+				throw MatrixThrow_SetCol;
 
 			unsigned int ncol = _cole - _colb + 1;
 			if(rows() != _mat.rows() || _mat.cols() != ncol)
@@ -497,7 +649,7 @@ namespace MatrixLib
 		{
 			if(!(_colb < cols()) || !(_cole < cols())
 				|| !(_colb <= _cole))
-				return false;
+				throw MatrixThrow_SetCol;
 
 			unsigned int ncol = _cole - _colb + 1;
 			for(unsigned int j = 0; j < ncol; j++)
@@ -518,12 +670,17 @@ namespace MatrixLib
 		}
 
 	public:
+		inline bool getMatrix(_Matrix)
+		{
+
+		}
+
+	public:
 		// data = [data[0~_rowb-1][:] ; _mat ; data[_rowb:end][:]]
 		inline bool insertRow(unsigned int _rowb, _Matrix& _mat)
 		{
-			if(!(cols() == _mat.cols())
-				|| !(_rowb < rows()))
-				return false;
+			if(!(cols() == _mat.cols()) || !(_rowb < rows()))
+				throw MatrixThrow_InsertRow;
 
 			unsigned int bfrow =  rows();
 			unsigned int insrow = _mat.rows();
@@ -545,7 +702,7 @@ namespace MatrixLib
 		{
 			if(!(_rowb < rows()) || !(_rowe < rows())
 				|| !(_rowb <= _rowe) || assert() == false)
-				return false;
+				throw MatrixThrow_DeleteRow;
 
 			_Matrix mat1, mat2;
 			
@@ -565,7 +722,7 @@ namespace MatrixLib
 		{
 			if(!(rows() == _mat.rows())
 				|| !(_colb < cols()))
-				return false;
+				throw MatrixThrow_InsertCol;
 
 			unsigned int bfcol = cols();
 			unsigned int inscol = _mat.cols();
@@ -587,7 +744,7 @@ namespace MatrixLib
 		{
 			if(!(_colb < cols()) || !(_cole < cols())
 				|| !(_colb <= _cole) || assert() == false)
-				return false;
+				throw MatrixThrow_DeleteCol;
 
 			_Matrix mat1, mat2;
 
@@ -607,7 +764,7 @@ namespace MatrixLib
 		inline bool sumRow(_Matrix& _mat)
 		{
 			if(assert() == false)
-				return false;
+				throw MatrixThrow_SumRow;
 
 			_mat.resize(rows(), 1);
 			for (unsigned int i = 0; i < rows(); i++)
@@ -627,7 +784,7 @@ namespace MatrixLib
 		inline bool sumCol(_Matrix& _mat)
 		{
 			if(assert() == false)
-				return false;
+				throw MatrixThrow_SumCol;
 
 			_mat.resize(cols(), 1);
 			for (unsigned int j = 0; j < cols(); j++)
@@ -647,7 +804,7 @@ namespace MatrixLib
 		inline bool meanRow(_Matrix& _mat)
 		{
 			if(assert() == false)
-				return false;
+				throw MatrixThrow_MeanRow;
 
 			_mat.resize(rows(), 1);
 			for (unsigned int i = 0; i < rows(); i++)
@@ -667,7 +824,7 @@ namespace MatrixLib
 		inline bool meanCol(_Matrix& _mat)
 		{
 			if(assert() == false)
-				return false;
+				throw MatrixThrow_MeanCol;
 
 			_mat.resize(cols(), 1);
 			for (unsigned int j = 0; j < cols(); j++)
@@ -687,7 +844,7 @@ namespace MatrixLib
 		inline bool maxRow(_Matrix& _mat)
 		{
 			if(assert() == false)
-				return false;
+				throw MatrixThrow_MaxRow;
 
 			_mat.resize(rows(), 1);
 			for (unsigned int i = 0; i < rows(); i++)
@@ -707,7 +864,7 @@ namespace MatrixLib
 		inline bool maxCol(_Matrix& _mat)
 		{
 			if(assert() == false)
-				return false;
+				throw MatrixThrow_MaxCol;
 
 			_mat.resize(cols(), 1);
 			for (unsigned int j = 0; j < cols(); j++)
@@ -727,7 +884,7 @@ namespace MatrixLib
 		inline bool minRow(_Matrix& _mat)
 		{
 			if(assert() == false)
-				return false;
+				throw MatrixThrow_MinRow;
 
 			_mat.resize(rows(), 1);
 			for (unsigned int i = 0; i < rows(); i++)
@@ -747,7 +904,7 @@ namespace MatrixLib
 		inline bool minCol(_Matrix& _mat)
 		{
 			if(assert() == false)
-				return false;
+				throw MatrixThrow_MinCol;
 
 			_mat.resize(cols(), 1);
 			for (unsigned int j = 0; j < cols(); j++)
@@ -767,9 +924,6 @@ namespace MatrixLib
 	public:
 		inline void sortRowAsc(_Matrix& _mat)
 		{
-			if(assert() == false)
-				return;
-
 			_mat.resize(rows(), cols());
 			for(unsigned int i = 0; i < rows(); i++)
 			{
@@ -791,9 +945,6 @@ namespace MatrixLib
 		
 		inline void sortRowDec(_Matrix& _mat)
 		{
-			if(assert() == false)
-				return;
-
 			_mat.resize(rows(), cols());
 			for(unsigned int i = 0; i < rows(); i++)
 			{
@@ -815,9 +966,6 @@ namespace MatrixLib
 
 		inline void sortColAsc(_Matrix& _mat)
 		{
-			if(assert() == false)
-				return;
-
 			_mat.resize(rows(), cols());
 			for(unsigned int j = 0; j < rows(); j++)
 			{
@@ -839,9 +987,6 @@ namespace MatrixLib
 
 		inline void sortColDec(_Matrix& _mat)
 		{
-			if(assert() == false)
-				return;
-
 			_mat.resize(rows(), cols());
 			for(unsigned int j = 0; j < rows(); j++)
 			{
@@ -866,7 +1011,7 @@ namespace MatrixLib
 		{
 			if(assert() == false
 				|| !(_row1 < rows()) || !(_row2 < rows()))
-				return false;
+				throw MatrixThrow_SwapRow;
 
 			_Number tmp;
 			for(unsigned int j = 0; j < cols(); j++)
@@ -884,7 +1029,7 @@ namespace MatrixLib
 		{
 			if(assert() == false
 				|| !(_col1 < cols()) || !(_col2 < cols()))
-				return false;
+				throw MatrixThrow_SwapCol;
 
 			_Number tmp = 0;
 			for (unsigned int i = 0; i < rows(); i++)
@@ -898,66 +1043,72 @@ namespace MatrixLib
 			return true;
 		}
 
-	public:
-		inline void getTranspose(_Matrix& _mat)
-		{
-			if(assert() == false)
-			{
-				// zeros matrix
-				_mat.free();
-			}
-
-			_mat.resize(cols(), rows());
-			for (unsigned int i = 0; i < cols(); i++)
-			{
-				for (unsigned int j = 0; j < rows(); j++)
-				{
-					// _mat.data = data'
-					_mat.atr(i,j) = at(j,i);
-				}
-			}
-		}
 
 	public:
+		// abstract: _to = (this > _mat)
 		inline void toMore(_Matrix& _mat, _Matrix& _to)
 		{
 			if(assert() == false || _mat.assert() == false
 				|| _Matrix::compareSize(*this, _mat) == false)
-				return;
+				throw MatrixThrow_ToMore;
 			
 			_to.resize(rows(), cols());
-			for (unsigned int i = 0; i < rows(); i++)
+			for (unsigned int n = 0; n < rows()*cols(); n++)
 			{
-				for (unsigned int j = 0; j < cols(); j++)
-				{
-					// compare value and return logistic result
-					_to.atr(i,j) = (at(i,j) > _mat.atr(i,j)) ? 1 : 0;
-				}
+				// compare value and return logistic result
+				_to.atr(n) = (at(n) > _mat.at(n)) ? 1 : 0;
 			}
 		}
 
+		// abstract: _to = (this > _mat)
+		inline void toMore(_Number _number, _Matrix& _to)
+		{
+			if(assert() == false)
+				throw MatrixThrow_ToMore;
+
+			_to.resize(rows(), cols());
+			for (unsigned int n = 0; n < rows()*cols(); n++)
+			{
+				// compare value and return logistic result
+				_to.atr(n) = (at(n) > _number) ? 1 : 0;
+			}
+		}
+
+		// abstract: _to = (this < _mat)
 		inline void toLess(_Matrix& _mat, _Matrix& _to)
 		{
 			if(assert() == false || _mat.assert() == false
 				|| _Matrix::compareSize(*this, _mat) == false)
-				return;
+				throw MatrixThrow_ToLess;
 
 			_to.resize(rows(), cols());
-			for (unsigned int i = 0; i < rows(); i++)
+			for (unsigned int n = 0; n < rows()*cols(); n++)
 			{
-				for (unsigned int j = 0; j < cols(); j++)
-				{
-					// compare value and return logistic result
-					_to.atr(i,j) = (at(i,j) < _mat.atr(i,j)) ? 1 : 0;
-				}
+				// compare value and return logistic result
+				_to.atr(n) = (at(n) < _mat.at(n)) ? 1 : 0;
 			}
 		}
 
+		// abstract: _to = (this < _number)
+		inline void toLess(_Number _number, _Matrix& _to)
+		{
+			if(assert() == false)
+				throw MatrixThrow_ToMore;
+
+			_to.resize(rows(), cols());
+			for (unsigned int n = 0; n < rows()*cols(); n++)
+			{
+				// compare value and return logistic result
+				_to.atr(n) = (at(n) < _number) ? 1 : 0;
+			}
+		}
+
+		// abstract: _to = (this == _mat)
 		inline void toEqual(_Matrix& _mat, _Matrix& _to)
 		{
 			if(assert() == false || _mat.assert() == false
 				|| _Matrix::compareSize(*this, _mat) == false)
-				return;
+				throw MatrixThrow_ToEqual;
 
 			_to.resize(rows(), cols());
 			for (unsigned int i = 0; i < rows(); i++)
@@ -970,28 +1121,24 @@ namespace MatrixLib
 			}
 		}
 
+		inline void toEqual(Number _number, _Matrix& _to)
+		{
+			if(assert() == false)
+				throw MatrixThrow_ToEqual;
+
+			_to.resize(rows(), cols());
+			for (unsigned int n = 0; n < rows()*cols(); n++)
+			{
+				// compare value and return logistic result
+				_to.atr(n) = (at(n) == _number) ? 1 : 0;
+			}
+		}
 
 	public:
 		inline _Matrix& operator = (_Matrix& _mat) const
 		{
 			copy(_mat);
 			return (*this);
-		}
-
-	public:
-		inline void toString()
-		{
-			ostringstream sstr;
-			for(unsigned int i = 0; i < rows(); i++)
-			{
-				for(unsigned int j = 0; j < cols(); j++)
-				{
-					sstr << at(i,j) << ' ';
-				}
-				sstr << '\n';
-			}
-			// output matrix
-			cout << sstr.str() << endl;
 		}
 	};
 }
