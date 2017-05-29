@@ -89,6 +89,11 @@ namespace MatrixLib
 			return nCol;
 		}
 
+		virtual inline unsigned int count()
+		{
+			return nRow*nCol;
+		}
+
 		virtual inline bool assert()
 		{
 			// is zero matrix

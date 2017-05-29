@@ -11,7 +11,7 @@
 
 namespace MatrixLib
 {
-	template<class Number>
+	template<class Number = double>
 	class Matrix : public MatrixB<Number>
 	{
 	public:
@@ -239,7 +239,7 @@ namespace MatrixLib
 		}
 
 		// _mat3 = _number / _mat1
-		static inline void toDiv(_Matrix& _mat1, _Number _number, _Matrix& _mat3)
+		static inline void toDiv(_Number _number, _Matrix& _mat1, _Matrix& _mat3)
 		{
 			unsigned int nrow = _mat1.rows();
 			unsigned int ncol = _mat1.cols();
@@ -483,7 +483,7 @@ namespace MatrixLib
 		}
 
 		// randomly produce a uniform distributed matrix
-		inline void setUniformi(unsigned int _row, unsigned int _col)
+		inline void randUniformi(unsigned int _row, unsigned int _col)
 		{
 			std::vector<_Number> vec;
 			UniformInt<_Number> normal;
@@ -497,7 +497,7 @@ namespace MatrixLib
 		}
 
 		// randomly produce a uniform distributed matrix
-		inline void setUniformf(unsigned int _row, unsigned int _col)
+		inline void randUniformf(unsigned int _row, unsigned int _col)
 		{
 			std::vector<_Number> vec;
 			UniformFloat<_Number> normal;
@@ -511,7 +511,7 @@ namespace MatrixLib
 		}
 
 		// randomly produce a normal distributed matrix
-		inline void setNormal(unsigned int _row, unsigned int _col)
+		inline void randNormal(unsigned int _row, unsigned int _col)
 		{
 			std::vector<_Number> vec;
 			Normal<_Number> normal;
@@ -520,7 +520,20 @@ namespace MatrixLib
 			normal.sample(vec, _row*_col);
 			for(unsigned int n = 0; n < rows()*cols(); n++)
 			{
-				atr(n) = vec[n];
+				atr(n) = (_Number)vec[n];
+			}
+		}
+
+		// shuffle the element of matrix
+		inline void randShuffle()
+		{
+			std::vector<_Number> vec;
+			Normal<_Number> normal;
+			_Matrix mat(this);
+
+			for(unsigned int n = 0; n < rows()*cols(); n++)
+			{
+				atr(n) = mat.at(vec[n]);
 			}
 		}
 
@@ -669,11 +682,6 @@ namespace MatrixLib
 			return setCol(_col, _col, _number);
 		}
 
-	public:
-		inline bool getMatrix(_Matrix)
-		{
-
-		}
 
 	public:
 		// data = [data[0~_rowb-1][:] ; _mat ; data[_rowb:end][:]]
@@ -920,6 +928,51 @@ namespace MatrixLib
 			//
 			return true;
 		}
+		
+
+	public:
+		inline _Number maxEle()
+		{
+			if(assert() == false)
+				throw MatrixThrow_MaxEle;
+
+			_Number number = at(0);
+			for (unsigned int n = 0; n < count(); n++)
+			{
+				number = (number < at(n)) ? at(n) : number;
+			}
+			//
+			return number;
+		}
+
+		inline _Number minEle()
+		{
+			if(assert() == false)
+				throw MatrixThrow_MinEle;
+
+			_Number number = at(0);
+			for (unsigned int n = 0; n < count(); n++)
+			{
+				number = (number > at(n)) ? at(n) : number;
+			}
+			//
+			return number;
+		}
+
+		inline _Number meanEle()
+		{
+			if(assert() == false)
+				throw MatrixThrow_MeanEle;
+
+			_Number number = 0;
+			for (unsigned int n = 0; n < count(); n++)
+			{
+				number += at(n);
+			}
+			//
+			return (number/count());
+		}
+
 
 	public:
 		inline void sortRowAsc(_Matrix& _mat)

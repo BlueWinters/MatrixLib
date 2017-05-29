@@ -42,6 +42,11 @@
 #define MatrixThrow_ToMore			61
 #define MatrixThrow_ToLess			62
 #define MatrixThrow_ToEqual			63
+#define MatrixThrow_MaxEle			64
+#define MatrixThrow_MinEle			65
+#define MatrixThrow_MeanEle			66
+
+#define MatrixThrow_IsOrderMatrix	201
 
 
 

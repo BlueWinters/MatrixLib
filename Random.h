@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <random>
+#include <algorithm>
 
 namespace MatrixLib
 {
@@ -13,7 +14,7 @@ namespace MatrixLib
 	class Distribution
 	{
 	public:
-		Distribution() :rdev(), gen(rdev())
+		Distribution() :device(), gen(device())
 		{
 
 		}
@@ -26,7 +27,7 @@ namespace MatrixLib
 	protected:
 		// random device object
 		// reference: http://en.cppreference.com/w/cpp/numeric/random/random_device
-		std::random_device rdev;
+		std::random_device device;
 		std::mt19937 gen;
 
 	public:
@@ -43,7 +44,7 @@ namespace MatrixLib
 	{
 	public:
 		UniformFloat(_Number _lower = 0.0, _Number _upper = 1.0)
-			:lower(_lower), upper(_upper), ndist(lower, upper)
+			:lower(_lower), upper(_upper), nDis(lower, upper)
 		{
 
 		}
@@ -59,7 +60,7 @@ namespace MatrixLib
 		_Number upper;
 		// distribution object
 		// reference: http://en.cppreference.com/w/cpp/numeric/random/uniform_real_distribution
-		std::uniform_real_distribution<_Number> ndist;
+		std::uniform_real_distribution<_Number> nDis;
 
 	public:
 		virtual void sample(std::vector<_Number>& _vec, unsigned int _n)
@@ -67,18 +68,18 @@ namespace MatrixLib
 			_vec.resize(_n);
 			for(unsigned int i = 0; i < _n; i++)
 			{
-				_vec[i] = ndist(gen);
+				_vec[i] = nDis(gen);
 			}
 		}
 
 		virtual _Number sample()
 		{
-			return ndist(gen);
+			return nDis(gen);
 		}
 
 		virtual _Number reset()
 		{
-			ndist.reset();
+			nDis.reset();
 		}
 	};
 
@@ -91,7 +92,7 @@ namespace MatrixLib
 	{
 	public:
 		UniformInt(_Number _lower, _Number _upper)
-			:lower(_lower), upper(_upper), ndist(lower, upper)
+			:lower(_lower), upper(_upper), uDis(lower, upper)
 		{
 
 		}
@@ -107,7 +108,7 @@ namespace MatrixLib
 		_Number upper;
 		// distribution object
 		// reference: http://en.cppreference.com/w/cpp/numeric/random/uniform_int_distribution
-		std::uniform_int_distribution<_Number> ndist;
+		std::uniform_int_distribution<_Number> uDis;
 
 	public:
 		virtual void sample(std::vector<_Number>& _vec, unsigned int _n)
@@ -115,18 +116,18 @@ namespace MatrixLib
 			_vec.resize(_n);
 			for(unsigned int i = 0; i < _n; i++)
 			{
-				_vec[i] = ndist(gen);
+				_vec[i] = uDis(gen);
 			}
 		}
 
 		virtual _Number sample()
 		{
-			return ndist(gen);
+			return uDis(gen);
 		}
 
 		virtual _Number reset()
 		{
-			ndist.reset();
+			uDis.reset();
 		}
 	};
 
@@ -138,7 +139,7 @@ namespace MatrixLib
 	{
 	public:
 		Normal(_Number _mean = 0.0, _Number _var = 1.0)
-			:mean(_mean), var(_var), ndist(mean, var)
+			:mean(_mean), var(_var), nDis(mean, var)
 		{
 
 		}
@@ -153,7 +154,7 @@ namespace MatrixLib
 		_Number mean;
 		_Number var;
 		// distribution object
-		std::normal_distribution<_Number> ndist;
+		std::normal_distribution<_Number> nDis;
 
 	public:
 		virtual void sample(std::vector<_Number>& _vec, unsigned int _n)
@@ -161,19 +162,75 @@ namespace MatrixLib
 			_vec.resize(_n);
 			for(unsigned int i = 0; i < _n; i++)
 			{
-				_vec[i] = ndist(gen);
+				_vec[i] = nDis(gen);
 			}
 		}
 
 		virtual _Number sample()
 		{
-			return ndist(gen);
+			return nDis(gen);
 		}
 
 		virtual _Number reset()
 		{
-			ndist.reset();
+			nDis.reset();
 		}
+	};
+
+
+	// 
+	class Sequence : Distribution<unsigned int>
+	{
+	public:
+		Sequence(unsigned int _lower, unsigned int _upper)
+			:lower(_lower), upper(_upper)
+		{
+			assert();
+			initialize();
+		}
+
+		Sequence(unsigned int _n)
+			:lower(1), upper(_n)
+		{
+			initialize();
+		}
+
+		~Sequence()
+		{
+
+		}
+
+	protected:
+		//
+		unsigned int lower;
+		unsigned int upper;
+		//
+		std::vector<unsigned int> seq;
+
+	protected:
+		void assert()
+		{
+			if(upper <= lower)
+				throw ;
+		}
+
+		void initialize()
+		{
+			unsigned int count = upper - lower + 1;
+			seq.resize(count);
+			for(unsigned int n = 0; n < count; n++)
+			{
+				seq[n] = n + lower;
+			}
+		}
+
+	public:
+		virtual void sample(std::vector<unsigned int>& _vec)
+		{
+			std::random_shuffle(seq.begin(), seq.end());
+			_vec = seq;
+		}
+
 	};
 }// end for namespace
 
